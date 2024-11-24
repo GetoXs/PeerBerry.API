@@ -12,5 +12,10 @@ namespace PeerBerry.API.Tests.Config
 				.AddEnvironmentVariables()
 				.Build();
 		}
+
+		public static string GetEnvironmentVariable(string name)
+		{
+			return GetIConfigurationRoot()[name];
+		}
 	}
 }

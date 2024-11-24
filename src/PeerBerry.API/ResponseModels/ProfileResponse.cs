@@ -1,4 +1,4 @@
-﻿namespace PeerBerry.API.ResponseModels
+﻿namespace PeerBerry.API.ResponseModels.ProfileResponse
 {
 	public class ProfileResponse
 	{

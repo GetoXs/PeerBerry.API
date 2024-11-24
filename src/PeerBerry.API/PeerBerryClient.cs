@@ -1,7 +1,13 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
-using PeerBerry.API.ResponseModels;
-using System.Net;
-using System.Net.Http.Json;
+using PeerBerry.API.ResponseModels.BalanceMainReponse;
+using PeerBerry.API.ResponseModels.GlobalResponse;
+using PeerBerry.API.ResponseModels.InvestmentsResponse;
+using PeerBerry.API.ResponseModels.LoansResponse;
+using PeerBerry.API.ResponseModels.LoginResponse;
+using PeerBerry.API.ResponseModels.PostLoanResponse;
+using PeerBerry.API.ResponseModels.ProfileResponse;
+using PeerBerry.API.ResponseModels.RefreshTokenResponse;
+using PeerBerry.API.ResponseModels.TFAResponse;
 
 namespace PeerBerry.API
 {
@@ -9,17 +15,18 @@ namespace PeerBerry.API
 	{
 		public PeerBerryClient()
 		{
-			var clientHandler = new HttpClientHandler() { AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli };
-			httpClient = new HttpClient(clientHandler)
-			{
-				BaseAddress = new Uri("https://api.peerberry.com/"),
-			};
+			_peerBerryProxyApi = new PeerBerryProxyApi();
+		}
+		public PeerBerryClient(PeerBerryProxyApi peerBerryProxyApi)
+		{
+			_peerBerryProxyApi = peerBerryProxyApi;
 		}
 
-		public async Task InitializeAsync(string email, string password, string tfaCode = null)
+		#region Init
+		public async Task InitializeUsingEmailAsync(string email, string password, string tfaCode = null)
 		{
-			this.email = email;
-			this.password = password;
+			_email = email;
+			_password = password;
 
 			var login = await LoginAsync(email, password);
 			if (login.tfa_is_active == true)
@@ -28,116 +35,143 @@ namespace PeerBerry.API
 					throw new Exception("Authentication need 2FA token");
 
 				var tfaLogin = await Login2FAAsync(login.tfa_token, tfaCode);
-				await AuthenticateUsingTokensAsync(tfaLogin.access_token, tfaLogin.refresh_token);
+				await AuthenticateAsync(tfaLogin.access_token, tfaLogin.refresh_token);
 			}
 			else
 			{
-				await AuthenticateUsingTokensAsync(login.access_token, login.refresh_token);
+				await AuthenticateAsync(login.access_token, login.refresh_token);
 			}
 		}
 
-		public async Task AuthenticateUsingTokensAsync(string accessToken, string refreshToken)
+		public async Task InitializeUsingTokensAsync(string accessToken, string refreshToken)
 		{
-			this.accessToken = accessToken;
-
-			var profile = await GetProfileAsync();
-			if (profile != null)
-				userPublicId = profile.publicId;
+			await AuthenticateAsync(accessToken, refreshToken);
 		}
+		#endregion
 
+		#region API endpoints
+
+		#region Without auth
 		public async Task<GlobalResponse?> GetGlobalAsync()
-		{
-			return await SendRequest<GlobalResponse>(HttpMethod.Get, $"v1/globals", false);
-		}
+			=> await SendRequest<GlobalResponse>(HttpMethod.Get, $"v1/globals", false);
 
 		public async Task<LoginResponse?> LoginAsync(string email, string password)
-		{
-			return await SendRequest<LoginResponse>(HttpMethod.Post, $"v1/investor/login", false, new
+			=> await SendRequest<LoginResponse>(HttpMethod.Post, $"v1/investor/login", false, new
 			{
 				email = email,
 				password = password,
 			});
-		}
 
 		public async Task<TFAResponse?> Login2FAAsync(string tfaToken, string tfaCode)
-		{
-			return await SendRequest<TFAResponse>(HttpMethod.Post, $"v1/investor/login/2fa", false, new
+			=> await SendRequest<TFAResponse>(HttpMethod.Post, $"v1/investor/login/2fa", false, new
 			{
 				code = tfaCode,
 				tfa_token = tfaToken,
 			});
-		}
 
-		[Obsolete("Does not work")]
-		public async Task<string?> RefreshTokenAsync(string accessToken, string refreshToken)
-		{
-			return await SendRequest<string>(HttpMethod.Post, $"v1/investor/refresh-token", false,
+		public async Task<RefreshTokenResponse?> RefreshTokenAsync(string accessToken, string refreshToken)
+			=> await SendRequest<RefreshTokenResponse>(HttpMethod.Post, $"v1/investor/refresh-token", false,
 				new
 				{
 					access_token = accessToken,
 					refresh_token = refreshToken,
 				});
-		}
+		#endregion
 
+		#region With auth
+		public async Task<PostLoanResponse?> BuyLoan(int loanId, decimal amount)
+			=> await SendRequest<PostLoanResponse>(HttpMethod.Post, $"v1/loans/{loanId}", true, new
+			{
+				amount = amount,
+			});
+
+		public async Task<BalanceMainReponse?> GetBalanceMainAsync()
+			=> await SendRequest<BalanceMainReponse>(HttpMethod.Get, "v2/investor/balance/main", true);
 		public async Task<ProfileResponse?> GetProfileAsync()
-		{
-			return await SendRequest<ProfileResponse>(HttpMethod.Get, $"v2/investor/profile", true);
-		}
+			=> await SendRequest<ProfileResponse>(HttpMethod.Get, $"v2/investor/profile", true);
 
 		public async Task<LoansResponse?> GetLoansAsync(int offset = 0, int pageSize = 40, Dictionary<string, string?>? searchParams = null, string sort = "-loanId")
 		{
 			ValidateAuth();
 
-			var url = $"v1/{userPublicId}/loans?sort={sort}&offset={offset}&pageSize={pageSize}";
+			var url = $"v1/{_userPublicId}/loans?sort={sort}&offset={offset}&pageSize={pageSize}";
 			if (searchParams != null)
 				url = QueryHelpers.AddQueryString(url, searchParams);
 
 			return await SendRequest<LoansResponse>(HttpMethod.Get, url, true);
 		}
 
+		public async Task<InvestmentsResponse?> GetInvestmentsAsync(int offset = 0, int pageSize = 40, Dictionary<string, string?>? searchParams = null, string sort = "-loanId")
+		{
+			ValidateAuth();
+
+			var url = $"/v1/investor/investments?sort={sort}&offset={offset}&pageSize={pageSize}";
+			if (searchParams != null)
+				url = QueryHelpers.AddQueryString(url, searchParams);
+
+			return await SendRequest<InvestmentsResponse>(HttpMethod.Get, url, true);
+		}
+		#endregion
+
+		public async Task<T> SendCustomApiAsync<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
+		{
+			if (isAuthorized)
+				ValidateAuth();
+			return await SendRequest<T>(method, url, isAuthorized, body);
+		}
+		#endregion
+
+		#region Private functions
 		private void ValidateAuth()
 		{
 			if (!IsAuth())
 				throw new Exception($"Authentication not inicialized.");
 		}
 
-		async Task<T?> SendRequest<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
+		private async Task AuthenticateAsync(string accessToken, string refreshToken)
 		{
-			HttpRequestMessage request = new HttpRequestMessage(method, url)
-			{
-				Headers = {
-					Authorization = isAuthorized ? new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken) : null,
-				},
-				Content = body != null ? JsonContent.Create(body) : null,
-			};
-			request.Headers.Add("Accept", "application/json; charset=UTF-8");
-			request.Headers.Add("Origin", "https://peerberry.com");
-			request.Headers.Add("Referer", "https://peerberry.com/en/client/overview");
-			request.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36");
+			_accessToken = accessToken;
+			_refreshToken = refreshToken;
 
-			var response = await httpClient.SendAsync(request);
-			if (response.StatusCode != HttpStatusCode.OK)
-			{
-				if (response.StatusCode == HttpStatusCode.Unauthorized)
-					throw new UnauthorizedAccessException(await response.Content.ReadAsStringAsync());
-				//TODO: log
-				throw new Exception(await response.Content.ReadAsStringAsync());
-			}
-			return await response.Content.ReadFromJsonAsync<T>();
+			var profile = await GetProfileAsync();
+			_userPublicId = profile.publicId;
 		}
 
-		private string? email;
-		private string? password;
-		private string? accessToken;
-		private string? refreshToken;
-		private string? userPublicId;
-		private readonly HttpClient httpClient;
+		static private bool _wasRetry = false;
 
-		private bool IsAuth() => userPublicId != null;
+		private async Task<T?> SendRequest<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
+		{
+start:
+			try
+			{
+				return await _peerBerryProxyApi.SendRequest<T>(method, url, _accessToken, body);
+			}
+			catch (UnauthorizedAccessException)
+			{
+				if (_wasRetry)
+					throw;
+				//Refresh mechanism
+				_wasRetry = true;
+				var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
+				await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
+				goto start;
+			}
+		}
+
+		private bool IsAuth() => _userPublicId != null;
+		#endregion
+
+		private string? _email;
+		private string? _password;
+		private string? _accessToken;
+		private string? _refreshToken;
+		private string? _userPublicId;
+		private readonly PeerBerryProxyApi _peerBerryProxyApi;
+
 
 		public void Dispose()
 		{
-			((IDisposable)httpClient).Dispose();
+			_peerBerryProxyApi.Dispose();
 		}
 	}
 }
