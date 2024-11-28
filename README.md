@@ -41,7 +41,6 @@ The NuGet package files are added along side the source with the latest GitHub r
 
 ```csharp
 // Get my balance
-var restClient = new BitfinexRestClient();
 var client = new PeerBerryClient();
 await client.InitializeUsingEmailAsync("email", "password");
 // alternatively you can use client.InitializeUsingTokensAsync
