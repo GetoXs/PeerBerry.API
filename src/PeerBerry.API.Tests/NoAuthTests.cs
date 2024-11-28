@@ -12,6 +12,7 @@ namespace PeerBerry.API.Tests
 		}
 
 		[Fact]
+		[Trait("CI", "true")]
 		public async Task GetGlobal()
 		{
 			var result = await client.GetGlobalAsync();
@@ -19,7 +20,7 @@ namespace PeerBerry.API.Tests
 		}
 
 		[Fact]
-		private async Task RefreshToken()
+		public async Task RefreshToken()
 		{
 			var result = await client.RefreshTokenAsync(ConfigHelper.GetEnvironmentVariable("PeerBerryAccessToken"),
 				ConfigHelper.GetEnvironmentVariable("PeerBerryRefreshToken"));
