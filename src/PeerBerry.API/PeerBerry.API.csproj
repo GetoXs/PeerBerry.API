@@ -19,6 +19,7 @@
     <AssemblyOriginatorKeyFile>..\..\..\PeerBerry.API.snk</AssemblyOriginatorKeyFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Version>1.0.0</Version>
+    <Configurations>Debug;Release;SignAndRelease</Configurations>
   </PropertyGroup>
 
   <ItemGroup>
