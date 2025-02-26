@@ -42,7 +42,7 @@
 		public int id { get; set; }
 		public string title { get; set; }
 		public string icon { get; set; }
-		public float interestRate { get; set; }
+		public decimal interestRate { get; set; }
 		public bool isLoyalty { get; set; }
 		public bool isDefault { get; set; }
 	}

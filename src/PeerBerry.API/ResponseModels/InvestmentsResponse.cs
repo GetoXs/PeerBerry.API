@@ -53,9 +53,9 @@
 		public string originatorTitle { get; set; }
 		public string dateOfPurchase { get; set; }
 		public string loanType { get; set; }
-		public float interest { get; set; }
-		public float interestRate { get; set; }
-		public float amount { get; set; }
+		public decimal interest { get; set; }
+		public decimal interestRate { get; set; }
+		public decimal amount { get; set; }
 		public string nextPaymentDate { get; set; }
 		public string finalPaymentDate { get; set; }
 		public string estimatedFinalPaymentDate { get; set; }
@@ -63,8 +63,8 @@
 		public float estimatedNextPayment { get; set; }
 		public string lastPaymentDate { get; set; }
 		public int term { get; set; }
-		public float receivedPayments { get; set; }
-		public float remainingPrincipal { get; set; }
+		public decimal receivedPayments { get; set; }
+		public decimal remainingPrincipal { get; set; }
 		public string status { get; set; }
 		public string currencySign { get; set; }
 		public bool isFinished { get; set; }

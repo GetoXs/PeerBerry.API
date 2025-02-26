@@ -29,16 +29,16 @@
 		public string termTypeTitle { get; set; }
 		public string status { get; set; }
 		public string statusTitle { get; set; }
-		public float interestRate { get; set; }
+		public decimal interestRate { get; set; }
 		public int? remainingTerm { get; set; }
 		public int? term { get; set; }
 		public int? initialTerm { get; set; }
-		public int? loanAmount { get; set; }
-		public int? assignedAmount { get; set; }
-		public float? availableToInvest { get; set; }
+		public decimal? loanAmount { get; set; }
+		public decimal? assignedAmount { get; set; }
+		public decimal? availableToInvest { get; set; }
 		public bool? allowedToInvest { get; set; }
-		public int? minimumInvestmentAmount { get; set; }
-		public float? investedAmount { get; set; }
+		public decimal? minimumInvestmentAmount { get; set; }
+		public decimal? investedAmount { get; set; }
 		public string currencySign { get; set; }
 		public bool? buyback { get; set; }
 		public bool? sellback { get; set; }

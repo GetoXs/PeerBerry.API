@@ -100,7 +100,7 @@
 		public bool autoinvestActive { get; set; }
 		public string logoDark { get; set; }
 		public string logoLight { get; set; }
-		public float interestRate { get; set; }
+		public decimal interestRate { get; set; }
 	}
 
 }
