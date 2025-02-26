@@ -137,7 +137,7 @@ namespace PeerBerry.API
 			_userPublicId = profile.publicId;
 		}
 
-		static private bool _wasRetry = false;
+		static private bool _wasRetryWithToken = false, _wasRetryWithUser = false;
 
 		private async Task<T?> SendRequest<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
 		{
@@ -148,13 +148,22 @@ start:
 			}
 			catch (UnauthorizedAccessException)
 			{
-				if (_wasRetry)
-					throw;
 				//Refresh mechanism
-				_wasRetry = true;
-				var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
-				await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
-				goto start;
+				if (!_wasRetryWithToken)
+				{
+					_wasRetryWithToken = true;
+					var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
+					await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
+					goto start;
+				}
+				else if(!_wasRetryWithUser)
+				{
+					_wasRetryWithToken = true;
+					var login = await LoginAsync(_email, _password);
+					await InitializeUsingTokensAsync(login.access_token, login.refresh_token);
+					goto start;
+				}
+				throw;
 			}
 		}
 
