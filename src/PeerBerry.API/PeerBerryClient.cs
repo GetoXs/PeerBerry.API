@@ -88,7 +88,7 @@ namespace PeerBerry.API
 		public async Task<BalanceMainReponse?> GetBalanceMainAsync()
 			=> await SendRequest<BalanceMainReponse>(HttpMethod.Get, "v2/investor/balance/main", true);
 		public async Task<ProfileResponse?> GetProfileAsync()
-			=> await SendRequest<ProfileResponse>(HttpMethod.Get, $"v2/investor/profile", true);
+			=> await SendRequest<ProfileResponse>(HttpMethod.Get, $"v2/investor/profile", false);
 
 		public async Task<LoansResponse?> GetLoansAsync(int offset = 0, int pageSize = 40, Dictionary<string, string?>? searchParams = null, string sort = "-loanId")
 		{
