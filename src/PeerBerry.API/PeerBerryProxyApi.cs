@@ -46,6 +46,7 @@ namespace PeerBerry.API
 		public void Dispose()
 		{
 			((IDisposable)_httpClient).Dispose();
+			GC.SuppressFinalize(this);
 		}
 	}
 }

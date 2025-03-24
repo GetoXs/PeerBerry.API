@@ -92,8 +92,6 @@ namespace PeerBerry.API
 
 		public async Task<LoansResponse?> GetLoansAsync(int offset = 0, int pageSize = 40, Dictionary<string, string?>? searchParams = null, string sort = "-loanId")
 		{
-			ValidateAuth();
-
 			var url = $"v1/{_userPublicId}/loans?sort={sort}&offset={offset}&pageSize={pageSize}";
 			if (searchParams != null)
 				url = QueryHelpers.AddQueryString(url, searchParams);
@@ -103,8 +101,6 @@ namespace PeerBerry.API
 
 		public async Task<InvestmentsResponse?> GetInvestmentsAsync(int offset = 0, int pageSize = 40, Dictionary<string, string?>? searchParams = null, string sort = "-loanId")
 		{
-			ValidateAuth();
-
 			var url = $"/v1/investor/investments?sort={sort}&offset={offset}&pageSize={pageSize}";
 			if (searchParams != null)
 				url = QueryHelpers.AddQueryString(url, searchParams);
@@ -113,12 +109,8 @@ namespace PeerBerry.API
 		}
 		#endregion
 
-		public async Task<T> SendCustomApiAsync<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
-		{
-			if (isAuthorized)
-				ValidateAuth();
-			return await SendRequest<T>(method, url, isAuthorized, body);
-		}
+		public async Task<T?> SendCustomApiAsync<T>(HttpMethod method, string url, bool isAuthorized, object? body = null) => await SendRequest<T>(method, url, isAuthorized, body);
+
 		#endregion
 
 		#region Private functions
@@ -141,6 +133,8 @@ namespace PeerBerry.API
 
 		private async Task<T?> SendRequest<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
 		{
+			if (isAuthorized)
+				ValidateAuth();
 start:
 			try
 			{
@@ -181,6 +175,7 @@ start:
 		public void Dispose()
 		{
 			_peerBerryProxyApi.Dispose();
+			GC.SuppressFinalize(this);
 		}
 	}
 }
