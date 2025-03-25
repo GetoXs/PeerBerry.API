@@ -2,6 +2,8 @@
 {
 	public class LoginResponse
 	{
+		public string identifier { get; set; }
+
 		public bool? tfa_is_active { get; set; }
 		public string tfa_token { get; set; }
 

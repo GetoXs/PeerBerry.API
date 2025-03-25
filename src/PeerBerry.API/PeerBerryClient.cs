@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
+using PeerBerry.API.Initialize;
 using PeerBerry.API.ResponseModels.BalanceMainReponse;
+using PeerBerry.API.ResponseModels.EmailCodeResponse;
 using PeerBerry.API.ResponseModels.GlobalResponse;
 using PeerBerry.API.ResponseModels.InvestmentsResponse;
 using PeerBerry.API.ResponseModels.LoansResponse;
@@ -8,10 +10,11 @@ using PeerBerry.API.ResponseModels.PostLoanResponse;
 using PeerBerry.API.ResponseModels.ProfileResponse;
 using PeerBerry.API.ResponseModels.RefreshTokenResponse;
 using PeerBerry.API.ResponseModels.TFAResponse;
+using System.Reflection.Metadata.Ecma335;
 
 namespace PeerBerry.API
 {
-	public class PeerBerryClient : IDisposable
+	public partial class PeerBerryClient : IDisposable
 	{
 		public PeerBerryClient()
 		{
@@ -22,8 +25,8 @@ namespace PeerBerry.API
 			_peerBerryProxyApi = peerBerryProxyApi;
 		}
 
-		#region Init
-		public async Task InitializeUsingEmailAsync(string email, string password, string tfaCode = null)
+		#region Initialize
+		public async Task<InitResult> InitializeUsingEmailAsync(string email, string password)
 		{
 			_email = email;
 			_password = password;
@@ -31,18 +34,39 @@ namespace PeerBerry.API
 			var login = await LoginAsync(email, password);
 			if (login.tfa_is_active == true)
 			{
-				if (tfaCode == null)
-					throw new Exception("Authentication need 2FA token");
-
-				var tfaLogin = await Login2FAAsync(login.tfa_token, tfaCode);
-				await AuthenticateAsync(tfaLogin.access_token, tfaLogin.refresh_token);
+				return new InitResult
+				{
+					Result = InitResultEnum.TwoFaNeeded,
+					Token = login.tfa_token,
+				};
+			}
+			else if(login.identifier != null)
+			{
+				return new InitResult
+				{
+					Result = InitResultEnum.EmailCodeNeeded,
+					Token = login.identifier,
+				};
 			}
 			else
 			{
 				await AuthenticateAsync(login.access_token, login.refresh_token);
+				return new InitResult
+				{
+					Result = InitResultEnum.Succeed,
+				};
 			}
 		}
-
+		public async Task InitializeUsing2Fa(string tfaToken, string tfaCode)
+		{
+			var tfaLogin = await Login2FAAsync(tfaToken, tfaCode);
+			await AuthenticateAsync(tfaLogin.access_token, tfaLogin.refresh_token);
+		}
+		public async Task InitializeUsingEmailCode(string identifier, string code)
+		{
+			var loginViaEmailCode = await LoginViaEmailCodeAsync(identifier, code);
+			await AuthenticateAsync(loginViaEmailCode.access_token, loginViaEmailCode.refresh_token);
+		}
 		public async Task InitializeUsingTokensAsync(string accessToken, string refreshToken)
 		{
 			await AuthenticateAsync(accessToken, refreshToken);
@@ -67,6 +91,13 @@ namespace PeerBerry.API
 			{
 				code = tfaCode,
 				tfa_token = tfaToken,
+			});
+
+		public async Task<EmailCodeResponse?> LoginViaEmailCodeAsync(string identifier, string code)
+			=> await SendRequest<EmailCodeResponse>(HttpMethod.Post, $"v1/investor/login/email-code", false, new
+			{
+				identifier = identifier,
+				code = code,
 			});
 
 		public async Task<RefreshTokenResponse?> RefreshTokenAsync(string accessToken, string refreshToken)
@@ -129,7 +160,7 @@ namespace PeerBerry.API
 			_userPublicId = profile.publicId;
 		}
 
-		static private bool _wasRetryWithToken = false, _wasRetryWithUser = false;
+		static private bool _wasRetryWithToken = false;
 
 		private async Task<T?> SendRequest<T>(HttpMethod method, string url, bool isAuthorized, object? body = null)
 		{
@@ -148,13 +179,6 @@ start:
 					_wasRetryWithToken = true;
 					var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
 					await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
-					goto start;
-				}
-				else if(!_wasRetryWithUser)
-				{
-					_wasRetryWithToken = true;
-					var login = await LoginAsync(_email, _password);
-					await InitializeUsingTokensAsync(login.access_token, login.refresh_token);
 					goto start;
 				}
 				throw;
