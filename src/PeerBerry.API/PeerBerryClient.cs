@@ -15,8 +15,7 @@ namespace PeerBerry.API
 {
 	public partial class PeerBerryClient : IDisposable
 	{
-
-		public PeerBerryClient(Action<AccessCredentials>? credentialsHasBeenRefreshed)
+		public PeerBerryClient(Action<AccessCredentials>? credentialsHasBeenRefreshed = null)
 		{
 			_peerBerryProxyApi = new PeerBerryProxyApi();
 			_credentialsHasBeenRefreshed = credentialsHasBeenRefreshed;
