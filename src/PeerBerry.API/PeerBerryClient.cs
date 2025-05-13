@@ -10,19 +10,21 @@ using PeerBerry.API.ResponseModels.PostLoanResponse;
 using PeerBerry.API.ResponseModels.ProfileResponse;
 using PeerBerry.API.ResponseModels.RefreshTokenResponse;
 using PeerBerry.API.ResponseModels.TFAResponse;
-using System.Reflection.Metadata.Ecma335;
 
 namespace PeerBerry.API
 {
 	public partial class PeerBerryClient : IDisposable
 	{
-		public PeerBerryClient()
+
+		public PeerBerryClient(Action<AccessCredentials>? credentialsHasBeenRefreshed)
 		{
 			_peerBerryProxyApi = new PeerBerryProxyApi();
+			_credentialsHasBeenRefreshed = credentialsHasBeenRefreshed;
 		}
-		public PeerBerryClient(PeerBerryProxyApi peerBerryProxyApi)
+		public PeerBerryClient(PeerBerryProxyApi peerBerryProxyApi, Action<AccessCredentials>? credentialsHasBeenRefreshed)
 		{
 			_peerBerryProxyApi = peerBerryProxyApi;
+			_credentialsHasBeenRefreshed = credentialsHasBeenRefreshed;
 		}
 
 		#region Initialize
@@ -179,6 +181,11 @@ start:
 					_wasRetryWithToken = true;
 					var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
 					await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
+					_credentialsHasBeenRefreshed?.Invoke(new AccessCredentials
+					{
+						AccessToken = refresh.access_token,
+						RefreshToken = refresh.refresh_token,
+					});
 					goto start;
 				}
 				throw;
@@ -194,7 +201,7 @@ start:
 		private string? _refreshToken;
 		private string? _userPublicId;
 		private readonly PeerBerryProxyApi _peerBerryProxyApi;
-
+		private Action<AccessCredentials>? _credentialsHasBeenRefreshed = null;
 
 		public void Dispose()
 		{
