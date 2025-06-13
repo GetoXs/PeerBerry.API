@@ -185,6 +185,7 @@ start:
 						AccessToken = refresh.access_token,
 						RefreshToken = refresh.refresh_token,
 					});
+					_wasRetryWithToken = false;
 					goto start;
 				}
 				throw;

@@ -15,9 +15,10 @@ PeerBerry.API is a strongly typed client library for accessing the PeerBerry API
 * Possibility to execute custom API calls (in case of PeerBerry new functionallities)
 * Automatic access token refresh mechanism
 * Initialization via refresh token or username/password
+* Open source so you can audit security mechanizms
 
 ## Supported Frameworks
-The library is targeting both `.NET 8.0` for optimal compatibility
+The library is targeting `.NET 8.0` for optimal compatibility
 
 ## Install the library
 
