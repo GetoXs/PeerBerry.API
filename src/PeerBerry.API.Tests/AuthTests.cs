@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using PeerBerry.API.Tests.Config;
 
 namespace PeerBerry.API.Tests
@@ -8,7 +9,8 @@ namespace PeerBerry.API.Tests
 
 		public AuthTests()
 		{
-			client = new PeerBerryClient();
+			ILoggerFactory loggerFactory = new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
+			client = new PeerBerryClient(loggerFactory.CreateLogger<PeerBerryClient>());
 		}
 
 		private async Task Init()

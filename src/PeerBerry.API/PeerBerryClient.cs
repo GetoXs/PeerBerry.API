@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
 using PeerBerry.API.Initialize;
 using PeerBerry.API.ResponseModels.BalanceMainReponse;
 using PeerBerry.API.ResponseModels.EmailCodeResponse;
@@ -15,14 +16,16 @@ namespace PeerBerry.API
 {
 	public partial class PeerBerryClient : IDisposable
 	{
-		public PeerBerryClient(Action<AccessCredentials>? credentialsHasBeenRefreshed = null)
+		public PeerBerryClient(ILogger<PeerBerryClient> logger, Action<AccessCredentials>? credentialsHasBeenRefreshed = null)
 		{
 			_peerBerryProxyApi = new PeerBerryProxyApi();
+			_logger = logger;
 			_credentialsHasBeenRefreshed = credentialsHasBeenRefreshed;
 		}
-		public PeerBerryClient(PeerBerryProxyApi peerBerryProxyApi, Action<AccessCredentials>? credentialsHasBeenRefreshed)
+		public PeerBerryClient(PeerBerryProxyApi peerBerryProxyApi, ILogger<PeerBerryClient> logger, Action<AccessCredentials>? credentialsHasBeenRefreshed)
 		{
 			_peerBerryProxyApi = peerBerryProxyApi;
+			_logger = logger;
 			_credentialsHasBeenRefreshed = credentialsHasBeenRefreshed;
 		}
 
@@ -177,9 +180,11 @@ start:
 				//Refresh mechanism
 				if (!_wasRetryWithToken)
 				{
+					_logger.LogWarning("Unauthorized access, trying to refresh token.");
 					_wasRetryWithToken = true;
 					var refresh = await RefreshTokenAsync(_accessToken, _refreshToken);
 					await InitializeUsingTokensAsync(refresh.access_token, refresh.refresh_token);
+					_logger.LogInformation("Token refreshed successfully.");
 					_credentialsHasBeenRefreshed?.Invoke(new AccessCredentials
 					{
 						AccessToken = refresh.access_token,
@@ -201,6 +206,7 @@ start:
 		private string? _refreshToken;
 		private string? _userPublicId;
 		private readonly PeerBerryProxyApi _peerBerryProxyApi;
+		private readonly ILogger<PeerBerryClient> _logger;
 		private Action<AccessCredentials>? _credentialsHasBeenRefreshed = null;
 
 		public void Dispose()
